@@ -1,1 +1,3 @@
-/testing.py
+*.py
+*.png
+!main.py
