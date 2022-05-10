@@ -1,15 +1,44 @@
 {
-    "scenes":{"role_and_bounce": [
-        [30, 80, 100],
-        [30, 100, 200],
-        [20, 500, 100, -10, 0]
-
-    ],
-    "midair_collision": [
-        [30, 100, 400, 20, -20],
-        [25, 500, 450, -20, -20]
-    ]},
-    "vectors":false,
-    "lines":false,
-    "frameRate": 1
+    "air_resistance": 1,
+    "displayTotalEnergy": false,
+    "frameRate": 1.0,
+    "lines": false,
+    "scenes": {
+        "midair_collision": [
+            [
+                30,
+                100,
+                400,
+                20,
+                -20
+            ],
+            [
+                25,
+                500,
+                450,
+                -20,
+                -20
+            ]
+        ],
+        "role_and_bounce": [
+            [
+                30,
+                80,
+                100
+            ],
+            [
+                30,
+                100,
+                200
+            ],
+            [
+                20,
+                500,
+                100,
+                -10,
+                0
+            ]
+        ]
+    },
+    "vectors": false
 }

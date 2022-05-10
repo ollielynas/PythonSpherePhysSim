@@ -4,6 +4,9 @@ import random
 import json
 from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
 
+with open('settings.json') as f:
+    jsonFile=json.loads(f.read())
+    f.close()
 class Circle:
 	def __init__(self, x, y, vx, vy, r):
 		self.x = x
@@ -14,25 +17,14 @@ class Circle:
 		self.m = r**2 * pi
 
 
-jsonFile={}
 
-draw_line = False
-draw_vector = False
 pauseOnColision = False
-air_vecosity = 1
+jsonFile["air_resistance"] = 1
 shapeLines = []
-frameRate = 1
 
 colided = []
-
-with open('settings.json') as f:
-    jsonFile=json.loads(f.read())
-    f.close()
-
-draw_line = jsonFile['lines']
-draw_vector = jsonFile['vectors']
-frameRate = jsonFile['frameRate']
-
+energy = 0
+events = []
 
 window = tk.Tk()       # creating the window object
 window.title('Sim')
@@ -43,6 +35,7 @@ objects = []
 
 c = tk.Canvas(window,width=600, height=600, bg="black")
 
+energy_string_var = tk.StringVar(value=f"energy : {energy if jsonFile['displayTotalEnergy'] else 'disabled'}")
 
 
 def newSphere(r, x, y, vx = 0, vy = 0):
@@ -57,6 +50,12 @@ def newSphere(r, x, y, vx = 0, vy = 0):
 	})
 
 
+def dump():
+	with open('settings.json', 'w') as outfile:
+		json.dump(jsonFile, outfile, sort_keys=True, indent=4)
+
+
+
 def sync_windows():
 	for widget in window.winfo_children(): # Loop through each widget in main window
 		if '!toplevel' in str(widget):
@@ -68,7 +67,7 @@ def sync_windows():
 window.bind("<Configure>", lambda event: sync_windows())
 
 def toolbarWindow():
-	global air_vecosity, draw_line, draw_vector
+	global jsonFile, energy_string_var
 	options= tk.Toplevel(window, bg="black")
 	options.title = "[15,0]"
 	options.geometry("300x500"+f"+{window.winfo_x()+625}+{window.winfo_y()}")
@@ -100,20 +99,22 @@ def toolbarWindow():
 	air_label = tk.Label(options, text="Air Vecosity", bg="black", fg="white")
 	air_label.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 	air_density_input = tk.Entry(options, name="air_density", bg="black", fg="white", insertbackground="#3C3F41")
-	air_density_input.insert(tk.END, str(air_vecosity))
+	air_density_input.insert(tk.END, str(jsonFile["air_resistance"]))
 	def set_air_density(event):
-		global air_vecosity
+		global jsonFile
+
 		try:
-			air_vecosity = float(air_density_input.get())
+			jsonFile["air_resistance"] = float(air_density_input.get())
 			if float(air_density_input.get()) > 500 or float(air_density_input.get()) < -100:
-				air_vecosity = 1
+				jsonFile["air_resistance"] = 1
 				air_density_input.delete(0, tk.END)
 				air_density_input.insert(0, "1")
 				return
 		except :
-			air_vecosity = 1
+			jsonFile["air_resistance"] = 1
 			insert = air_density_input.index("insert")-1
 			air_density_input.delete(insert)
+		dump()
 	air_density_input.bind("<KeyRelease>", lambda event:set_air_density(event))
 	air_density_input.pack(anchor=tk.NW, padx=10, pady=2)
 
@@ -121,41 +122,53 @@ def toolbarWindow():
 	frame_label = tk.Label(options, text="Game Speed (defalt 60)", bg="black", fg="white")
 	frame_label.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 	framerate_input = tk.Entry(options, name="gameSpeed", bg="black", fg="white", insertbackground="#3C3F41")
-	framerate_input.insert(tk.END, str(frameRate))
+	framerate_input.insert(tk.END, str(jsonFile['frameRate']))
 	def set_frame_rate(event):
-		global frameRate
+		global jsonFile
 		try:
-			frameRate = float(framerate_input.get())
+			jsonFile['frameRate'] = float(framerate_input.get())
 			if float(framerate_input.get()) > 500 or float(framerate_input.get()) < -100:
-				frameRate = 1
+				jsonFile['frameRate'] = 1
 				framerate_input.delete(0, tk.END)
 				framerate_input.insert(0, "1")
 				return
 		except :
-			frameRate = 1
+			jsonFile['frameRate'] = 1
 			insert = framerate_input.index("insert")-1
 			framerate_input.delete(insert)
+		dump()
 	framerate_input.bind("<KeyRelease>", lambda event:set_frame_rate(event))
 	framerate_input.pack(anchor=tk.NW, padx=10, pady=2)
 
 
 
 	def toggle_lines():
-		global draw_line
-		draw_line = not draw_line
-		lines_button.config(text="Lines: "+("On" if draw_line else "Off"))
+		global jsonFile
+		jsonFile['lines'] = not jsonFile['lines']
+		lines_button.config(text="Lines: "+("On" if jsonFile['lines'] else "Off"))
+		dump()
 
-	lines_button = tk.Button(options, text="Lines: "+("On" if draw_line else "Off"), bg="black", fg="white", command=lambda:toggle_lines())
+	lines_button = tk.Button(options, text="Lines: "+("On" if jsonFile['lines'] else "Off"), bg="black", fg="white", command=lambda:toggle_lines())
 	lines_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 	def toggle_vectors():
-		global draw_vector
-		draw_vector = not draw_vector
-		vector_button.config(text="Vectors: "+("On" if draw_vector else "Off"))
+		global jsonFile
+		jsonFile["vectors"] = not jsonFile["vectors"]
+		vector_button.config(text="Vectors: "+("On" if jsonFile['vectors'] else "Off"))
+		dump()
 
-	vector_button = tk.Button(options, text="Vectors: "+("On" if draw_vector else "Off"), bg="black", fg="white", command=lambda:toggle_vectors())
+	vector_button = tk.Button(options, text="Vectors: "+("On" if jsonFile['vectors'] else "Off"), bg="black", fg="white", command=lambda:toggle_vectors())
 	vector_button.pack(anchor=tk.NW, padx=10, pady=10)
 
+
+	def toggle_energy():
+		global jsonFile
+		jsonFile["displayTotalEnergy"] = not jsonFile["displayTotalEnergy"]
+		energy_string_var.set(f"energy : {energy if jsonFile['displayTotalEnergy'] else 'disabled'}")
+		dump()
+
+	energy_button = tk.Button(options, textvariable=energy_string_var, bg="black", fg="white", command=lambda:toggle_energy())
+	energy_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
 
@@ -197,14 +210,13 @@ def click(event):
 		if (objects[i]["r"] >= sqrt((bx[2]-objects[i]["r"] - event.x) ** 2 + (bx[3]-objects[i]["r"] - event.y) ** 2)):
 			c.delete((objects[i]["o"]))
 			c.delete((objects[i]["vector"]))
-			c.delete((objects[i]["equvector"]))
 			objects.pop(i)
 			clicked_circle = True
 
 	if not clicked_circle:
 		newSphere(random.randint(20,50), event.x, event.y)
 
-c.bind("<Button-1>", lambda event:click(event))
+c.bind("<Button-1>", lambda event:events.append(click(event)))
 
 c.pack()
 run = True
@@ -271,9 +283,7 @@ def colisions(list, object):
 			elif B==0:
 				angle = 90
 			else:
-				print(abs(B) ,"/", abs(C))
 				angle =  degrees(asin(abs(B) / abs(C)))+90
-
 
 
 			E = (C/list[i]["r"])*A
@@ -283,22 +293,16 @@ def colisions(list, object):
 			overlap = sqrt((bx[2]-list[i]["r"] - (obx[2]-object["r"])) ** 2 + (bx[3]-list[i]["r"] - (obx[3]-object["r"])) ** 2)
 
 
-			if draw_line:
+			if jsonFile['lines']:
 				shapeLines.append(c.create_line(obj1.x, obj1.y, obj2.x, obj2.y, fill="grey"))
 				shapeLines.append(c.create_line(obj1.x, obj2.y, obj2.x, obj2.y, fill="grey"))
 				shapeLines.append(c.create_line(obj2.x, obj1.y, obj2.x, obj2.y, fill="grey"))
 				shapeLines.append(c.create_line(obj2.x, obj2.y, obj1.x, obj2.y, fill="grey"))
 				shapeLines.append(c.create_text(obj1.x, obj1.y, text=str(angle), fill="grey"))
-			if pauseOnColision:
-				window.update()
-				time.sleep(5)
 
-			temp = [object["vx"],object["vy"]] 
 
-			if B > 0: xscale = -1 
-			else: xscale = 1
-			if A > 0: yscale = -1
-			else: yscale = 1
+
+
 
 			if abs(abs(obj1.y) - abs(obj2.y)) == 0:
 				xdiff = 1
@@ -309,10 +313,10 @@ def colisions(list, object):
 
 
 			#     	times by reletive mass - times by raitox - add vy2 to vx1 timesed by angle ydiff 
-			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * xdiff) + (obj2.vy * ydiff))
-			object["vy"] = (obj1.m / obj2.m) * ((obj2.vx * (1-xdiff)) + (obj2.vy * (1-ydiff)))
-			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * xdiff) + (obj1.vy * ydiff))
-			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vx * (1-xdiff)) + (obj1.vy * (1-ydiff)))
+			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * xdiff) + (obj2.vy * (1-ydiff)))
+			object["vy"] = (obj1.m / obj2.m) * ((obj2.vx * (1-xdiff)) + (obj2.vy * ydiff))
+			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * xdiff) + (obj1.vy * (1-ydiff)))
+			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vx * (1-xdiff)) + (obj1.vy * ydiff))
 
 
 		else:
@@ -323,15 +327,21 @@ def colisions(list, object):
 	return (object, list)
 
 def render():
-	global run, objects, colided, air_vecosity, frameRate
+	global run, objects, colided, jsonFile, events, energy
 	loopNum = 0
 	while True:
-		try: int(frameRate); 1/frameRate
-		except: frameRate = 1
-		for i in range(ceil(frameRate)):
+
+		try: int(jsonFile['frameRate']); 1/jsonFile['frameRate']
+		except: jsonFile['frameRate'] = 1
+		for i in range(ceil(jsonFile['frameRate'])):
 			time.sleep(0.01616/100)
 			window.update()
 		if not run: break
+		for i in range(len(events)): # this way the events don't occur during the loop and mess with variables im useing
+			print(str(events[i]))
+			events[i]
+		events=[]
+
 		loopNum += 1
 
 		if len(shapeLines) > 0:
@@ -344,29 +354,37 @@ def render():
 				c.delete(shapeLines.pop(0))
 		objects = sortList(objects)
 		colided = []
+		energy = 0
 		for i in range(len(objects)):
 			obj = objects[i]
+
+			energy += abs(obj["vx"]*obj["m"]) + abs(obj["vy"]*obj["m"])
+
+
 			if str(type(objects[i])) != "<class 'dict'>":print(str(type(objects[i]))); break; 
 			obj["vy"] += 2
 
 			# Stokes’ Law: F=6πaηv. (air friction)
-			obj["vy"] -= ((6*pi*sqrt(obj["r"])*obj["vy"])/(6*pi*30*40))*air_vecosity 
-			obj["vx"] -= ((6*pi*sqrt(obj["r"])*obj["vx"])/(6*pi*30*40))*air_vecosity
+			obj["vy"] -= ((6*pi*sqrt(obj["r"])*obj["vy"])/(6*pi*30*40))*jsonFile["air_resistance"] 
+			obj["vx"] -= ((6*pi*sqrt(obj["r"])*obj["vx"])/(6*pi*30*40))*jsonFile["air_resistance"]
 			obj["vx"] = floor(obj["vx"]*10000)/10000
-
 
 			obj["vy"] = detect_floor(obj)
 			obj["vx"] = detect_walls(obj)
+
 			if len(objects) > 1:
 				
 				col = colisions(objects, obj)
 				objects[i], objects = col[0], col[1]
-		
+		if jsonFile["displayTotalEnergy"]:
+			energy_string_var.set(f"energy : {floor(energy*10)/10 if jsonFile['displayTotalEnergy'] else 'disabled'}")
+
+
 		for i in range(len(objects)):
 			obj = objects[i]
 			c.move(obj["o"], obj["vx"], obj["vy"])
 			obx = c.bbox(obj["o"])
-			if draw_vector:
+			if jsonFile['vectors']:
 				c.coords(obj["vector"], obx[0]+obj["r"], obx[1]+obj["r"], obx[0]+obj["vx"]+obj["r"], obx[1]+obj["vy"]+obj["r"])
 
 
