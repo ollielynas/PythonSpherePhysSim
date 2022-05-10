@@ -3,6 +3,9 @@ import time
 import random
 import json
 from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
+from turtle import color
+import matplotlib.pyplot as plt
+import numpy as np
 
 with open('settings.json') as f:
     jsonFile=json.loads(f.read())
@@ -25,6 +28,12 @@ shapeLines = []
 colided = []
 energy = 0
 events = []
+lifetime = 0
+maxHeight = 0
+obj_mem = [[],[]]
+
+energyGraphLine = [[0],[0]]
+ballsGraphLine = [[0],[0]]
 
 window = tk.Tk()       # creating the window object
 window.title('Sim')
@@ -65,6 +74,69 @@ def sync_windows():
 			y = window.winfo_y() + offset[1]
 			widget.geometry("+%d+%d" % (x,y))
 window.bind("<Configure>", lambda event: sync_windows())
+
+def openGraph():
+	global lifetime, energyGraphLine, maxHeight, ballsGraphLine, objects, obj_mem
+	ballsGraphLine[0].append(lifetime)
+	ballsGraphLine[1].append(len(objects))
+
+	fig, host = plt.subplots()
+	fig.subplots_adjust(right=0.75)
+
+	par1 = host.twinx()
+	par2 = host.twinx()
+
+	# move the spine of the second axes outwards
+	par2.spines["right"].set_position(("axes", 1.2))
+
+	velocity = [[0],[0]]
+
+	for i in range(len(obj_mem[0])):
+		for j in range(len(obj_mem[1][i])):
+			velocity[0].append(obj_mem[0][i])
+			velocity[1].append(sqrt(abs(abs(obj_mem[1][i][j]["vx"])**2 + abs(obj_mem[1][i][j]["vy"])**2)))
+
+
+
+
+	p1, = host.plot(energyGraphLine[0], energyGraphLine[1], 'r-', label="Sum Kenetic Energy")
+	p2, = par1.plot(ballsGraphLine[0], ballsGraphLine[1], 'g-', label="Number of balls")
+	p3, = par1.plot(velocity[0], velocity[1], 'o', label="Number of balls", color="grey", alpha=0.1, linewidth=1)
+
+	host.set_xlim(0, lifetime)
+	host.set_ylim(0, max(energyGraphLine[1])+(max(energyGraphLine[1])/10))
+	par1.set_ylim(0, max(ballsGraphLine[1])*2+(max(ballsGraphLine[1])/20))
+	par2.set_ylim(0, max(velocity[1]))
+
+	host.set_xlabel("Time")
+	host.set_ylabel("Sum Energy")
+	par1.set_ylabel("Number of balls")
+	par2.set_ylabel("Velocity")
+
+	lines = [p1, p2, p3]
+	host.legend(lines, [l.get_label() for l in lines])
+
+	for ax in [par1, par2]:
+		ax.set_frame_on(True)
+		ax.patch.set_visible(False)
+
+		plt.setp(ax.spines.values(), visible=False)
+		ax.spines["right"].set_visible(True)
+
+	host.yaxis.label.set_color(p1.get_color())
+	par1.yaxis.label.set_color(p2.get_color())
+	par2.yaxis.label.set_color(p3.get_color())
+
+	par1.spines["right"].set_edgecolor(p2.get_color())
+	par2.spines["right"].set_edgecolor(p3.get_color())
+
+	host.tick_params(axis='y', colors=p1.get_color())
+	par1.tick_params(axis='y', colors=p2.get_color())
+	par2.tick_params(axis='y', colors=p3.get_color())
+
+	plt.show()
+
+
 
 def toolbarWindow():
 	global jsonFile, energy_string_var
@@ -142,6 +214,8 @@ def toolbarWindow():
 
 
 
+	
+
 	def toggle_lines():
 		global jsonFile
 		jsonFile['lines'] = not jsonFile['lines']
@@ -157,7 +231,9 @@ def toolbarWindow():
 		vector_button.config(text="Vectors: "+("On" if jsonFile['vectors'] else "Off"))
 		dump()
 
-	vector_button = tk.Button(options, text="Vectors: "+("On" if jsonFile['vectors'] else "Off"), bg="black", fg="white", command=lambda:toggle_vectors())
+	vector_button = tk.Button(options,
+    text="Vectors: "+("On" if jsonFile['vectors'] else "Off"),
+    bg="black", fg="white", command=lambda:toggle_vectors())
 	vector_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
@@ -170,7 +246,23 @@ def toolbarWindow():
 	energy_button = tk.Button(options, textvariable=energy_string_var, bg="black", fg="white", command=lambda:toggle_energy())
 	energy_button.pack(anchor=tk.NW, padx=10, pady=10)
 
+	def toggle_vectors_graph():
+		global jsonFile
+		jsonFile["plot_velocity"] = not jsonFile["plot_velocity"]
+		vector_button.config(text="plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"))
+		dump()
 
+	vector_button = tk.Button(options,
+    text="Plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"),
+    bg="black", fg="white", command=lambda:toggle_vectors_graph())
+	vector_button.pack(anchor=tk.NW, padx=10, pady=10)
+
+
+
+
+
+	lines_button = tk.Button(options, text="Graph", bg="black", fg="white", command=lambda:openGraph())
+	lines_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 tools = tk.Button(text="Settings", command=lambda: toolbarWindow(), bg="black" , fg="white", borderwidth=0)
 tools.place(x=10, y=10)
@@ -203,7 +295,8 @@ def in_circle(center_x, center_y, radius, x, y):
 
 
 def click(event):
-	global objects
+	global objects, lifetime
+
 	clicked_circle = False
 	for i in range(0, len(objects)):
 		bx = c.bbox(objects[i]["o"])
@@ -213,8 +306,11 @@ def click(event):
 			objects.pop(i)
 			clicked_circle = True
 
+
 	if not clicked_circle:
 		newSphere(random.randint(20,50), event.x, event.y)
+	ballsGraphLine[0].append(lifetime)
+	ballsGraphLine[1].append(len(objects))
 
 c.bind("<Button-1>", lambda event:events.append(click(event)))
 
@@ -327,16 +423,28 @@ def colisions(list, object):
 	return (object, list)
 
 def render():
-	global run, objects, colided, jsonFile, events, energy
+	global run, objects, colided, jsonFile, events, energy, lifetime, maxHeight, ballsGraphLine, obj_mem
 	loopNum = 0
+	ballsGraphLine[0].append(0)
+	ballsGraphLine[1].append(len(objects))
 	while True:
-
 		try: int(jsonFile['frameRate']); 1/jsonFile['frameRate']
 		except: jsonFile['frameRate'] = 1
 		for i in range(ceil(jsonFile['frameRate'])):
 			time.sleep(0.01616/100)
 			window.update()
 		if not run: break
+		lifetime+=1
+
+		if jsonFile["plot_velocity"]:
+			obj_mem[0].append(lifetime)
+			obj_mem[1].append(objects)
+		if len(obj_mem[0]) > 10000:
+			for i in range(len(obj_mem[0])):
+				obj_mem[0].pop(0)
+				obj_mem[1].pop(0)
+				i += 4
+
 		for i in range(len(events)): # this way the events don't occur during the loop and mess with variables im useing
 			print(str(events[i]))
 			events[i]
@@ -378,6 +486,8 @@ def render():
 				objects[i], objects = col[0], col[1]
 		if jsonFile["displayTotalEnergy"]:
 			energy_string_var.set(f"energy : {floor(energy*10)/10 if jsonFile['displayTotalEnergy'] else 'disabled'}")
+			energyGraphLine[0].append(lifetime)
+			energyGraphLine[1].append(energy)
 
 
 		for i in range(len(objects)):
@@ -386,8 +496,6 @@ def render():
 			obx = c.bbox(obj["o"])
 			if jsonFile['vectors']:
 				c.coords(obj["vector"], obx[0]+obj["r"], obx[1]+obj["r"], obx[0]+obj["vx"]+obj["r"], obx[1]+obj["vy"]+obj["r"])
-
-
 
 			else:
 				c.coords(obj["vector"], 0, 0, 0, 0)

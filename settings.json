@@ -1,8 +1,9 @@
 {
     "air_resistance": 1,
-    "displayTotalEnergy": false,
+    "displayTotalEnergy": true,
     "frameRate": 1.0,
     "lines": false,
+    "plot_velocity": true,
     "scenes": {
         "midair_collision": [
             [
