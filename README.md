@@ -1,2 +1,2 @@
 # PythonSpherePhysSim
- simulateing BALLLS
+ simulateing BALLS
