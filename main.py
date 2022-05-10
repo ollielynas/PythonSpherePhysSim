@@ -2,7 +2,7 @@ import tkinter as tk
 import time
 import random
 import json
-from math import acos, degrees, pi, sqrt, atan, asin, floor, log
+from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
 
 class Circle:
 	def __init__(self, x, y, vx, vy, r):
@@ -11,6 +11,7 @@ class Circle:
 		self.vx = vx
 		self.vy = vy
 		self.r = r
+		self.m = r**2 * pi
 
 
 jsonFile={}
@@ -20,12 +21,18 @@ draw_vector = False
 pauseOnColision = False
 air_vecosity = 1
 shapeLines = []
+frameRate = 1
 
 colided = []
 
 with open('settings.json') as f:
     jsonFile=json.loads(f.read())
     f.close()
+
+draw_line = jsonFile['lines']
+draw_vector = jsonFile['vectors']
+frameRate = jsonFile['frameRate']
+
 
 window = tk.Tk()       # creating the window object
 window.title('Sim')
@@ -46,7 +53,6 @@ def newSphere(r, x, y, vx = 0, vy = 0):
 		"r": r,
 		"m": pi*(r**2), # mass
 		"o": c.create_oval(x-r, y-r, x+r, y+r, outline="white"),
-		"equvector": c.create_line(x, y, x+vx, y+vy, fill="grey", arrow=tk.LAST, width=1),
 		"vector": c.create_line(x, y, x+vx, y+vy, fill="orange", arrow=tk.LAST, width=1),
 	})
 
@@ -110,7 +116,30 @@ def toolbarWindow():
 			air_density_input.delete(insert)
 	air_density_input.bind("<KeyRelease>", lambda event:set_air_density(event))
 	air_density_input.pack(anchor=tk.NW, padx=10, pady=2)
-    
+
+
+	frame_label = tk.Label(options, text="Game Speed (defalt 60)", bg="black", fg="white")
+	frame_label.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
+	framerate_input = tk.Entry(options, name="gameSpeed", bg="black", fg="white", insertbackground="#3C3F41")
+	framerate_input.insert(tk.END, str(frameRate))
+	def set_frame_rate(event):
+		global frameRate
+		try:
+			frameRate = float(framerate_input.get())
+			if float(framerate_input.get()) > 500 or float(framerate_input.get()) < -100:
+				frameRate = 1
+				framerate_input.delete(0, tk.END)
+				framerate_input.insert(0, "1")
+				return
+		except :
+			frameRate = 1
+			insert = framerate_input.index("insert")-1
+			framerate_input.delete(insert)
+	framerate_input.bind("<KeyRelease>", lambda event:set_frame_rate(event))
+	framerate_input.pack(anchor=tk.NW, padx=10, pady=2)
+
+
+
 	def toggle_lines():
 		global draw_line
 		draw_line = not draw_line
@@ -271,13 +300,19 @@ def colisions(list, object):
 			if A > 0: yscale = -1
 			else: yscale = 1
 
-			xRatio1 = angle/90 + (angle+90)/90
-			xRatio2 = 1-xRatio1
+			if abs(abs(obj1.y) - abs(obj2.y)) == 0:
+				xdiff = 1
+			else: xdiff = abs(abs(obj1.x) - abs(obj2.x))/abs(abs(obj1.y) - abs(obj2.y))
+			if abs(abs(obj1.x) - abs(obj2.x)) == 0:
+				ydiff = 1
+			else: ydiff =  abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
 
-			object["vx"] =	((angle)/90) *list[i]["vx"]* list[i]["m"]/object["m"] + (list[i]["vy"] * list[i]["m"]/object["m"] -  ((angle+90)/90) * list[i]["vy"] * list[i]["m"]/object["m"])
-			object["vy"] = ((angle)/90) * list[i]["vy"] * list[i]["m"]/object["m"] + (list[i]["vy"] * list[i]["m"]/object["m"] - ((angle)/90) *list[i]["vx"]* list[i]["m"]/object["m"]) * yscale
-			list[i]["vx"] = ((angle)/90) * (temp[0] * object["m"] / list[i]["m"]) + ((temp[1] * object["m"] / list[i]["m"])-((angle+90)/90) * (temp[1] * object["m"] / list[i]["m"]))	* xscale
-			list[i]["vy"] = ((angle)/90) * (temp[1] * object["m"] / list[i]["m"]) + ((temp[1] * object["m"] / list[i]["m"])-((angle+90)/90) * (temp[1] * object["m"] / list[i]["m"])) * yscale
+
+			#     	times by reletive mass - times by raitox - add vy2 to vx1 timesed by angle ydiff 
+			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * xdiff) + (obj2.vy * ydiff))
+			object["vy"] = (obj1.m / obj2.m) * ((obj2.vx * (1-xdiff)) + (obj2.vy * (1-ydiff)))
+			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * xdiff) + (obj1.vy * ydiff))
+			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vx * (1-xdiff)) + (obj1.vy * (1-ydiff)))
 
 
 		else:
@@ -288,11 +323,14 @@ def colisions(list, object):
 	return (object, list)
 
 def render():
-	global run, objects, colided, air_vecosity
+	global run, objects, colided, air_vecosity, frameRate
 	loopNum = 0
 	while True:
-		time.sleep(0.01616)
-		window.update()
+		try: int(frameRate); 1/frameRate
+		except: frameRate = 1
+		for i in range(ceil(frameRate)):
+			time.sleep(0.01616/100)
+			window.update()
 		if not run: break
 		loopNum += 1
 
@@ -308,12 +346,14 @@ def render():
 		colided = []
 		for i in range(len(objects)):
 			obj = objects[i]
+			if str(type(objects[i])) != "<class 'dict'>":print(str(type(objects[i]))); break; 
 			obj["vy"] += 2
 
 			# Stokes’ Law: F=6πaηv. (air friction)
 			obj["vy"] -= ((6*pi*sqrt(obj["r"])*obj["vy"])/(6*pi*30*40))*air_vecosity 
 			obj["vx"] -= ((6*pi*sqrt(obj["r"])*obj["vx"])/(6*pi*30*40))*air_vecosity
 			obj["vx"] = floor(obj["vx"]*10000)/10000
+
 
 			obj["vy"] = detect_floor(obj)
 			obj["vx"] = detect_walls(obj)
@@ -330,12 +370,8 @@ def render():
 				c.coords(obj["vector"], obx[0]+obj["r"], obx[1]+obj["r"], obx[0]+obj["vx"]+obj["r"], obx[1]+obj["vy"]+obj["r"])
 
 
-				if (abs(obj["vx"]) < 10 and abs(obj["vy"] < 10)):
-					ex = log(abs(obj["vx"]))
-					c.coords(obj["equvector"], obx[0]+obj["r"], obx[1]+obj["r"], obx[0]+obj["vx"]*ex+obj["r"], obx[1]+obj["vy"]+obj["r"])
-				else: c.coords(obj["equvector"], 0, 0, 0, 0)
+
 			else:
-				c.coords(obj["equvector"], 0, 0, 0, 0)
 				c.coords(obj["vector"], 0, 0, 0, 0)
 
 

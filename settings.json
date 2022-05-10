@@ -8,5 +8,8 @@
     "midair_collision": [
         [30, 100, 400, 20, -20],
         [25, 500, 450, -20, -20]
-    ]}
+    ]},
+    "vectors":false,
+    "lines":false,
+    "frameRate": 1
 }
