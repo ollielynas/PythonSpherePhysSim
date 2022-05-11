@@ -1,7 +1,7 @@
 {
     "air_resistance": 1,
     "displayTotalEnergy": true,
-    "frameRate": 1.0,
+    "frameRate": 10.0,
     "lines": false,
     "plot_velocity": true,
     "scenes": {
@@ -41,5 +41,5 @@
             ]
         ]
     },
-    "vectors": false
+    "vectors": true
 }

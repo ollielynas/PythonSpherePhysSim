@@ -191,7 +191,7 @@ def toolbarWindow():
 	air_density_input.pack(anchor=tk.NW, padx=10, pady=2)
 
 
-	frame_label = tk.Label(options, text="Game Speed (defalt 60)", bg="black", fg="white")
+	frame_label = tk.Label(options, text="Game Speed", bg="black", fg="white")
 	frame_label.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 	framerate_input = tk.Entry(options, name="gameSpeed", bg="black", fg="white", insertbackground="#3C3F41")
 	framerate_input.insert(tk.END, str(jsonFile['frameRate']))
@@ -269,12 +269,12 @@ tools.place(x=10, y=10)
 
 
 
-newSphere(30, 80, 100)
-newSphere(30, 100, 200)
-newSphere(20, 500, 100, -10, 0)
+# newSphere(30, 80, 100)
+# newSphere(30, 100, 200)
+# newSphere(20, 500, 100, -10, 0)
 
-# newSphere(30, 100, 400, 20, -20)
-# newSphere(25, 500, 450, -20, -23)
+newSphere(30, 100, 400, 20, -20)
+newSphere(25, 500, 450, -20, -23)
 
 # newSphere(30, 300, 300)
 # newSphere(30, 300, 450)
@@ -400,20 +400,27 @@ def colisions(list, object):
 
 
 
-			if abs(abs(obj1.y) - abs(obj2.y)) == 0:
-				xdiff = 1
-			else: xdiff = abs(abs(obj1.x) - abs(obj2.x))/abs(abs(obj1.y) - abs(obj2.y))
-			if abs(abs(obj1.x) - abs(obj2.x)) == 0:
-				ydiff = 1
-			else: ydiff =  abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
+			if abs(abs(obj1.y) - abs(obj2.y)) > abs(abs(obj1.x) - abs(obj2.x)):
+				diff = abs(abs(obj1.x) - abs(obj2.x))/abs(abs(obj1.y) - abs(obj2.y))
+			else: 
+				diff = abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
 
 
-			#     	times by reletive mass - times by raitox - add vy2 to vx1 timesed by angle ydiff 
-			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * xdiff) + (obj2.vy * (1-ydiff)))
-			object["vy"] = (obj1.m / obj2.m) * ((obj2.vx * (1-xdiff)) + (obj2.vy * ydiff))
-			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * xdiff) + (obj1.vy * (1-ydiff)))
-			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vx * (1-xdiff)) + (obj1.vy * ydiff))
+			print(diff, 1-diff, )
+			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * diff) + (obj2.vy * diff))
+			object["vy"] = (obj1.m / obj2.m) * ((obj2.vy * (1-diff)) + (obj2.vy *(1- diff)))
+			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * diff) + (obj1.vy * diff))
+			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vy * (1-diff)) + (obj1.vy *(1- diff)))
 
+
+
+			# if ((list[i]["r"]+object["r"])*0.8 >= sqrt((bx[2]-list[i]["r"] - (obx[2]-object["r"])) ** 2 + (bx[3]-list[i]["r"] - (obx[3]-object["r"])) ** 2)):
+			# 	c.itemconfig(list[i]["o"], outline="red")
+			# 	c.itemconfig(object["o"], outline="red")
+			# 	object["vx"] += 10*(ceil((obj1.x - obj2.x)/(abs(obj1.x - obj2.x)+1)*10)-0.5) *(1-diff)
+			# 	object["vy"] += 10*(ceil((obj1.y - obj2.y)/(abs(obj1.y - obj2.y)+1)*10)-0.5) *(diff)
+			# 	list[i]["vx"] -= 10*(ceil((obj1.x - obj2.x)/(abs(obj1.x - obj2.x)+1)*10)-0.5) *(1-diff)
+			# 	list[i]["vy"] -= 10*(ceil((obj1.y - obj2.y)/(abs(obj1.y - obj2.y)+1)*10)-0.5) *(diff)
 
 		else:
 			c.itemconfig(list[i]["o"], outline="white")
@@ -496,6 +503,7 @@ def render():
 			obx = c.bbox(obj["o"])
 			if jsonFile['vectors']:
 				c.coords(obj["vector"], obx[0]+obj["r"], obx[1]+obj["r"], obx[0]+obj["vx"]+obj["r"], obx[1]+obj["vy"]+obj["r"])
+
 
 			else:
 				c.coords(obj["vector"], 0, 0, 0, 0)
