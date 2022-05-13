@@ -1,5 +1,5 @@
 {
-    "air_resistance": 30.0,
+    "air_resistance": 1,
     "displayTotalEnergy": false,
     "frameRate": 1.0,
     "lines": false,

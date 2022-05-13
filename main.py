@@ -279,8 +279,11 @@ tools.place(x=10, y=10)
 # newSphere(30, 100, 200)
 # newSphere(20, 500, 100, -10, 0)
 
-newSphere(30, 100, 400, 20, -20)
-newSphere(25, 500, 450, -20, -23)
+# newSphere(30, 100, 400, 20, -20)
+# newSphere(25, 500, 450, -20, -23)
+
+newSphere(30, 260, 300, 40, 0)
+newSphere(25, 460, 330, -30, 0)
 
 # newSphere(30, 300, 300)
 # newSphere(30, 300, 450)
@@ -411,21 +414,50 @@ def colisions(list, object):
 			else: 
 				diff = abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
 
+			ratio = {
+				"x":abs(abs(obj1.x) - abs(obj2.x)),
+				"y":abs(abs(obj1.y) - abs(obj2.y))
+			}
+			total = ratio["x"]+ratio["y"]
+			
+			if total == 0: return (object, list)
 
-			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * diff) + (obj2.vy * diff))
-			object["vy"] = (obj1.m / obj2.m) * ((obj2.vy * (1-diff)) + (obj2.vy *(1- diff)))
-			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * diff) + (obj1.vy * diff))
-			list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vy * (1-diff)) + (obj1.vy *(1- diff)))
+			ratio["x"] /= total
+			ratio["y"] /= total
+
+			totalvx = abs(obj1.vx)+abs(obj2.vx)
+			totalvy = abs(obj1.vy)+abs(obj2.vy)
+
+			totalE1 = (abs(obj1.vx)+abs(obj1.vy))*(obj1.m / obj2.m)
+			totalE2 =  (abs(obj2.vx)+abs(obj2.vy))*(obj2.m / obj1.m)
+
+			object["vx"] = totalE2*ratio["x"]
+			object["vy"] = totalE2*ratio["y"]
+			list[i]["vx"] = totalE1*ratio["x"]
+			list[i]["vy"] = totalE1*ratio["y"]
+
+			if obj1.x < obj2.x:
+				object["vx"] *= -1
+			else:
+				list[i]["vx"] *= -1
+    
+			if obj1.y < obj2.y:
+				object["vy"] *= -1
+			else:
+				list[i]["vy"] *= -1
 
 
 
-			# if ((list[i]["r"]+object["r"])*0.8 >= sqrt((bx[2]-list[i]["r"] - (obx[2]-object["r"])) ** 2 + (bx[3]-list[i]["r"] - (obx[3]-object["r"])) ** 2)):
-			# 	c.itemconfig(list[i]["o"], outline="red")
-			# 	c.itemconfig(object["o"], outline="red")
-			# 	object["vx"] += 10*(ceil((obj1.x - obj2.x)/(abs(obj1.x - obj2.x)+1)*10)-0.5) *(1-diff)
-			# 	object["vy"] += 10*(ceil((obj1.y - obj2.y)/(abs(obj1.y - obj2.y)+1)*10)-0.5) *(diff)
-			# 	list[i]["vx"] -= 10*(ceil((obj1.x - obj2.x)/(abs(obj1.x - obj2.x)+1)*10)-0.5) *(1-diff)
-			# 	list[i]["vy"] -= 10*(ceil((obj1.y - obj2.y)/(abs(obj1.y - obj2.y)+1)*10)-0.5) *(diff)
+			# object["vx"] = (obj2.vx*total)/ratio["x"] + (obj2.vy*total)/ratio["y"]
+
+			# object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * (diff)) + (obj2.vy * (diff)))
+			# object["vy"] = (obj1.m / obj2.m) * ((obj2.vy * (diff)) + (obj2.vy *(diff)))
+			# list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * (diff)) + (obj1.vy * (diff)))
+			# list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vy * (1-diff)) + (obj1.vy *(1-diff)))
+
+
+
+
 
 		else:
 			c.itemconfig(list[i]["o"], outline="white")
@@ -493,15 +525,18 @@ def render():
 
 			obj["vy"] = detect_floor(obj)
 			obj["vx"] = detect_walls(obj)
-
 			if len(objects) > 1:
 				
 				col = colisions(objects, obj)
 				objects[i], objects = col[0], col[1]
+
+
 		if jsonFile["displayTotalEnergy"]:
 			energy_string_var.set(f"energy : {floor(energy*10)/10 if jsonFile['displayTotalEnergy'] else 'disabled'}")
 			energyGraphLine[0].append(lifetime)
 			energyGraphLine[1].append(energy)
+
+
 
 
 		for i in range(len(objects)):
@@ -744,6 +779,36 @@ def test():
 		log(text="smaller objects fall faster (not sure if that is good or not)", condition="passed")
 	else:
 		log(text="smaller objects fall faster (not sure if that is good or not)", condition="failed")
+
+	objects = []
+	c.delete("all")
+	newSphere(20, 100, -1500, 0, 0)
+	for i in range(30): render()
+	fallDist1 = c.bbox(objects[0]["o"])[1]
+	objects = []
+	c.delete("all")
+	newSphere(20, 100, -1500, 0, 0)
+	jsonFile['air_resistance'] = 10
+	for i in range(30): render()
+	fallDist2 = c.bbox(objects[0]["o"])[1]
+
+	if fallDist2 < fallDist1:
+		log(text="higher air densitys cause objects to fall slower", condition="passed")
+	else:
+		log(text="higher air densitys cause objects to fall slower", condition="failed")
+
+	jsonFile['air_resistance'] = 1
+
+	log(title="density")
+	
+	objects = []
+	c.delete("all")
+
+	newSphere(20, 300, 300, 5, 0)
+	newSphere(30, 370, 300, -5, 0)
+	
+	for i in range(30): render()
+
 
 	# |------------------------------------ Keep tests above here ------------------------------------------------|	
 	log(title="\n		Test finished")
