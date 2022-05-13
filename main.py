@@ -1,12 +1,10 @@
-from re import L
 import tkinter as tk
 import time
 import random
 import json
 from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
 import matplotlib.pyplot as plt
-import numpy as np
-import sys
+
 
 
 with open('settings.json') as f:
@@ -208,7 +206,7 @@ def toolbarWindow():
 	dropdown = tk.OptionMenu(options, levelName, *levelOptions)
 	dropdown.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 
-	air_label = tk.Label(options, text="Air Vecosity", bg="black", fg="white")
+	air_label = tk.Label(options, text="Air Density", bg="black", fg="white")
 	air_label.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 	air_density_input = tk.Entry(options, name="air_density", bg="black", fg="white", insertbackground="#3C3F41")
 	air_density_input.insert(tk.END, str(jsonFile["air_resistance"]))
@@ -290,24 +288,24 @@ def toolbarWindow():
 	test_button = tk.Button(options, text="test", bg="black", fg="white", command=lambda:test())
 	test_button.pack(anchor=tk.NW, padx=10, pady=10)
 
-	def toggle_vectors_graph():
-		global jsonFile
-		jsonFile["plot_velocity"] = not jsonFile["plot_velocity"]
-		vector_button.config(text="plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"))
-		dump()
+	# def toggle_vectors_graph():
+	# 	global jsonFile
+	# 	jsonFile["plot_velocity"] = not jsonFile["plot_velocity"]
+	# 	vector_button.config(text="plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"))
+	# 	dump()
 
-	vector_button = tk.Button(options,
-    text="Plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"),
-    bg="black", fg="white", command=lambda:toggle_vectors_graph())
-	vector_button.pack(anchor=tk.NW, padx=10, pady=10)
+	# vector_button = tk.Button(options,
+    # text="Plot velocity: "+("On" if jsonFile['plot_velocity'] else "Off"),
+    # bg="black", fg="white", command=lambda:toggle_vectors_graph())
+	# vector_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
 	preset_button = tk.Button(options, text="Presets", bg="black", fg="white", command=lambda:openPresetWindow(options))
 	preset_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
-	lines_button = tk.Button(options, text="Graph", bg="black", fg="white", command=lambda:openGraph())
-	lines_button.pack(anchor=tk.NW, padx=10, pady=10)
+	graph_button = tk.Button(options, text="Graph", bg="black", fg="white", command=lambda:openGraph())
+	graph_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 tools = tk.Button(text="Settings", command=lambda: toolbarWindow(), bg="black" , fg="white", borderwidth=0)
 tools.place(x=10, y=10)

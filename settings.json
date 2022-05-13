@@ -1,10 +1,41 @@
 {
-    "air_resistance": 1,
+    "air_resistance": 1.0,
     "displayTotalEnergy": true,
-    "frameRate": 1,
+    "frameRate": 1.0,
     "lines": false,
     "plot_velocity": true,
     "scenes": {
+        "fall comparason": [
+            [
+                20,
+                220,
+                -5000,
+                0,
+                0
+            ],
+            [
+                40,
+                420,
+                -5000,
+                0,
+                0
+            ]
+        ],
+        "low blow": [
+            [
+                30,
+                300,
+                100,
+                0
+            ],
+            [
+                30,
+                320,
+                500,
+                0,
+                -60
+            ]
+        ],
         "midair_collision": [
             [
                 30,
@@ -35,11 +66,31 @@
             [
                 20,
                 500,
+                400,
+                -20,
+                0
+            ]
+        ],
+        "snowman": [
+            [
+                35,
+                300,
+                300,
+                0
+            ],
+            [
+                30,
+                300,
                 100,
-                -10,
+                0
+            ],
+            [
+                50,
+                300,
+                500,
                 0
             ]
         ]
     },
-    "vectors": false
+    "vectors": true
 }
