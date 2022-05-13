@@ -1,3 +1,4 @@
+from distutils.log import error
 import tkinter as tk
 import time
 import random
@@ -6,6 +7,9 @@ from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
 from turtle import color
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+
+from pygame import QUIT
 
 with open('settings.json') as f:
     jsonFile=json.loads(f.read())
@@ -246,6 +250,10 @@ def toolbarWindow():
 	energy_button = tk.Button(options, textvariable=energy_string_var, bg="black", fg="white", command=lambda:toggle_energy())
 	energy_button.pack(anchor=tk.NW, padx=10, pady=10)
 
+
+	test_button = tk.Button(options, text="test", bg="black", fg="white", command=lambda:test())
+	test_button.pack(anchor=tk.NW, padx=10, pady=10)
+
 	def toggle_vectors_graph():
 		global jsonFile
 		jsonFile["plot_velocity"] = not jsonFile["plot_velocity"]
@@ -429,8 +437,10 @@ def colisions(list, object):
 
 	return (object, list)
 
+stop = False
+
 def render():
-	global run, objects, colided, jsonFile, events, energy, lifetime, maxHeight, ballsGraphLine, obj_mem
+	global run, objects, colided, jsonFile, events, energy, lifetime, maxHeight, ballsGraphLine, obj_mem, stop
 	loopNum = 0
 	ballsGraphLine[0].append(0)
 	ballsGraphLine[1].append(len(objects))
@@ -507,10 +517,116 @@ def render():
 
 			else:
 				c.coords(obj["vector"], 0, 0, 0, 0)
+		if stop: return
 
 
-render()
+# def quitProgram(): # WHY WON'T IT DIE????
+# 	window.quit()
+# 	raise SystemExit
+# 	quit()
+# 	exit()
+# 	sys.exit()
 
 
-window.protocol("WM_DELETE_WINDOW",  lambda: quit())
-window.mainloop()
+# window.protocol("WM_DELETE_WINDOW",  lambda: quitProgram())
+
+
+# |------------------------------------------------------------- unit testing -------------------------------------| 
+
+def test():
+	global stop, objects
+	stop = True
+
+	testResault = tk.Toplevel(window)
+	testResault.title("test results")
+	testResault.minsize(300, 300)
+
+	logText= tk.Text(testResault, width = 100)
+	logText.pack()
+	logText.insert(tk.END, "test results:")
+
+
+	def log(text="undefined", condition="null", title=""):
+		if title != "":
+			logText.insert(tk.END,"\n\n"+title)
+			return
+
+		textLength = len(text)
+		if condition == "passed":
+			condition = "   | ✓"
+		elif condition == "failed":
+			condition = "✗ |   "
+		if textLength >= 70:
+			testLength = 60
+		logText.insert(tk.END,str("\n	"+text+" "*(70-textLength)+condition))
+
+
+	# test 1
+	objects = []
+	c.delete("all")
+	preTestSpeed = jsonFile['frameRate']
+	jsonFile['frameRate'] = 0
+	log(title="Object collision along ground with objects of different radi")
+	newSphere(30, 300, 600, 0, 0)
+	newSphere(10, 350, 600, -30, 0)
+	START_VELOCITY = 10
+	for i in range(3): render()
+	if objects[0]["r"] == 30:
+		log("list ordering", "passed")
+		BIG = 0
+		SMALL = 1
+	else:
+		log("list ordering", "failed")
+		BIG = 1
+		SMALL = 0
+
+	if objects[SMALL]["vx"]+objects[SMALL]["vy"] == 0:
+		log("smaller obj loseing all velocity", "passed")
+	else:
+		log(" smaller obj losing all velocity", "failed")
+
+	if objects[BIG]["vy"]+objects[BIG]["vy"] >= 0:
+		log("bigger obj getting juggled into air", "failed")
+	else:
+		log("bigger obj getting juggled into air", "passed")
+
+	if sum([ objects[BIG]["vy"],objects[BIG]["vy"], objects[SMALL]["vy"],objects[SMALL]["vy"]] )> START_VELOCITY:
+		log("energy was lost to air friction", "failed")
+	else:
+		log("energy was lost to air friction", "passed")
+
+	objects = []
+	c.delete("all")
+
+
+	# test 2
+
+	log(title="newtons cradle")
+	newSphere(20.0001, 300, 600, 0, 0)
+	newSphere(20.0002, 341, 600, 0, 0)
+	newSphere(20.0003, 382, 600, 0, 0)
+	newSphere(20.0004, 423, 600, 0, 0)
+	newSphere(20.0005, 500, 600, -10, 0)
+
+	for i in range(10): render()
+
+	if objects[0]["r"] == 20.0001:
+		log("list ordering 0", "passed")
+	else:
+		log("list ordering 0", "failed")
+
+	objects = []
+	c.delete("all")
+
+
+
+
+	jsonFile['frameRate'] = preTestSpeed
+	stop = False
+	# test 2
+
+while True:
+	render()
+
+
+
