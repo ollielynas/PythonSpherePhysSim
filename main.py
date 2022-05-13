@@ -1,15 +1,13 @@
-from distutils.log import error
+from re import L
 import tkinter as tk
 import time
 import random
 import json
 from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
-from turtle import color
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from pygame import QUIT
 
 with open('settings.json') as f:
     jsonFile=json.loads(f.read())
@@ -414,7 +412,6 @@ def colisions(list, object):
 				diff = abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
 
 
-			print(diff, 1-diff, )
 			object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * diff) + (obj2.vy * diff))
 			object["vy"] = (obj1.m / obj2.m) * ((obj2.vy * (1-diff)) + (obj2.vy *(1- diff)))
 			list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * diff) + (obj1.vy * diff))
@@ -489,9 +486,9 @@ def render():
 			if str(type(objects[i])) != "<class 'dict'>":print(str(type(objects[i]))); break; 
 			obj["vy"] += 2
 
-			# Stokes’ Law: F=6πaηv. (air friction)
-			obj["vy"] -= ((6*pi*sqrt(obj["r"])*obj["vy"])/(6*pi*30*40))*jsonFile["air_resistance"] 
-			obj["vx"] -= ((6*pi*sqrt(obj["r"])*obj["vx"])/(6*pi*30*40))*jsonFile["air_resistance"]
+			# Stokes’ Law: F=6πaηv. (air friction) to adapt this for one less dimention i square rooted raidus
+			obj["vy"] -= 2*((6*pi*obj["r"]*obj["vy"])/(6*pi*20*40))*jsonFile["air_resistance"]
+			obj["vx"] -= 2*((6*pi*obj["r"]*obj["vx"])/(6*pi*20*40))*jsonFile["air_resistance"]
 			obj["vx"] = floor(obj["vx"]*10000)/10000
 
 			obj["vy"] = detect_floor(obj)
@@ -539,16 +536,16 @@ def test():
 
 	testResault = tk.Toplevel(window)
 	testResault.title("test results")
-	testResault.minsize(300, 300)
+	testResault.minsize(500, 300)
 
-	logText= tk.Text(testResault, width = 100)
+	logText= tk.Text(testResault, width = 100, height= 50)
 	logText.pack()
 	logText.insert(tk.END, "test results:")
 
 
 	def log(text="undefined", condition="null", title=""):
 		if title != "":
-			logText.insert(tk.END,"\n\n"+title)
+			logText.insert(tk.END,"\n\n "+title)
 			return
 
 		textLength = len(text)
@@ -557,7 +554,7 @@ def test():
 		elif condition == "failed":
 			condition = "✗ |   "
 		if textLength >= 70:
-			testLength = 60
+			textLength = 60
 		logText.insert(tk.END,str("\n	"+text+" "*(70-textLength)+condition))
 
 
@@ -565,8 +562,11 @@ def test():
 	objects = []
 	c.delete("all")
 	preTestSpeed = jsonFile['frameRate']
+	preTestFriction = jsonFile['air_resistance']
+	jsonFile['air_resistance'] = 1
+
 	jsonFile['frameRate'] = 0
-	log(title="Object collision along ground with objects of different radi")
+	log(title="unevan collision")
 	newSphere(30, 300, 600, 0, 0)
 	newSphere(10, 350, 600, -30, 0)
 	START_VELOCITY = 10
@@ -576,7 +576,7 @@ def test():
 		BIG = 0
 		SMALL = 1
 	else:
-		log("list ordering", "failed")
+		log("correct list ordering", "failed")
 		BIG = 1
 		SMALL = 0
 
@@ -610,20 +610,154 @@ def test():
 
 	for i in range(10): render()
 
-	if objects[0]["r"] == 20.0001:
-		log("list ordering 0", "passed")
-	else:
-		log("list ordering 0", "failed")
+	for i in range(len(objects)):
+		if objects[i]["r"] == 20.0001:
+			if objects[i]["vx"] != 0:
+				log(text="ball 1 is moveing", condition="passed")
+			else:
+				log(text="ball 1 is moveing", condition="failed")
+		elif objects[i]["r"] == 20.0002:
+			if objects[i]["vx"] == 0:
+				log(text="ball 2 is not moveing", condition="passed")
+			else:
+				log(text="ball 2 is not moveing", condition="failed")
+		elif objects[i]["r"] == 20.0003:
+			if objects[i]["vx"] == 0:
+				log(text="ball 3 is not moveing", condition="passed")
+			else:
+				log(text="ball 3 is not moveing", condition="failed")
+		elif objects[i]["r"] == 20.0004:
+			if objects[i]["vx"] == 0:
+				log(text="ball 4 is not moveing", condition="passed")
+			else:
+				log(text="ball 4 is not moveing", condition="failed")
+		elif objects[i]["r"] == 20.0005:
+			if objects[i]["vx"] == 0:
+				log(text="ball 5 is not moveing", condition="passed")
+			else:
+				log(text="ball 5 is not moveing", condition="failed")
 
 	objects = []
 	c.delete("all")
 
 
-
-
-	jsonFile['frameRate'] = preTestSpeed
-	stop = False
 	# test 2
+
+	log(title="stack of balls (2)")
+
+	objects = []
+	c.delete("all")
+
+	newSphere(30, 300, 500, 0, 0)
+	newSphere(20, 300, 200, 0, 0)
+
+	for i in range(50): render()
+
+	if objects[0]["vx"] == 0 and objects[1]["vx"] == 0:
+		log(text="balls are balancd", condition="passed")
+	else:
+		log(text="balls are balancd", condition="failed")
+
+	if objects[0]["vy"] == 0 and objects[1]["vy"] == 0:
+		log(text="neither are falling", condition="passed")
+	else:
+		log(text="neither are falling", condition="failed")
+
+	if c.bbox(objects[0]["o"])[3]-2 > c.bbox(objects[0]["o"])[1]:
+		log(text="overlap", condition="failed")
+	else:
+		log(text="overlap", condition="passed")
+
+
+	log(title="unbalalanced stack (Left)")
+
+	objects = []
+	c.delete("all")
+
+	newSphere(30, 320, 500, 0, 0)
+	newSphere(20, 300, 200, 0, 0)
+
+	for i in range(30): render()
+
+	if objects[0]["vx"] == 0 and objects[1]["vx"] == 0:
+		log(text="balls are not balancd", condition="failed")
+	else:
+		log(text="balls are not balancd", condition="passed")
+
+	if objects[0]["vy"] == 0 and objects[1]["vy"] == 0:
+		log(text="neither are falling", condition="passed")
+	else:
+		log(text="neither are falling", condition="failed")
+
+	if (objects[0]["vx"] < 0 and objects[1]["vx"] > 0) or (objects[0]["vx"] > 0 and objects[1]["vx"] < 0):
+		log(text="ball move different directions", condition="passed")
+	else:
+		log(text="ball move different directions", condition="failed")
+
+	log(title="unbalalanced stack (Right)")
+
+	objects = []
+	c.delete("all")
+
+	newSphere(30, 300, 500, 0, 0)
+	newSphere(20, 320, 200, 0, 0)
+
+	for i in range(30): render()
+
+	if objects[0]["vx"] == 0 and objects[1]["vx"] == 0:
+		log(text="balls are not balancd", condition="failed")
+	else:
+		log(text="balls are not balancd", condition="passed")
+
+	if objects[0]["vy"] == 0 and objects[1]["vy"] == 0:
+		log(text="neither are falling", condition="passed")
+	else:
+		log(text="neither are falling", condition="failed")
+
+	if (objects[0]["vx"] < 0 and objects[1]["vx"] > 0) or (objects[0]["vx"] > 0 and objects[1]["vx"] < 0):
+		log(text="ball move different directions", condition="passed")
+	else:
+		log(text="ball move different directions", condition="failed")
+
+	log(title="air friction")
+
+	objects = []
+	c.delete("all")
+
+	newSphere(20, 300, -1500, 0, 0)
+
+
+	for i in range(60): render()
+	if objects[0]["vy"] <= 20:
+		log(text="termanal velocity for 20r sphere is 20px/s", condition="passed")
+	else:
+		log(text="termanal velocity for 20r sphere is 20px/s", condition="failed")
+
+	objects = []
+	c.delete("all")
+
+	newSphere(20, 100, -1500, 0, 0)
+	newSphere(30, 500, -1500, 0, 0)
+
+	for i in range(60): render()
+	if objects[0]["r"] == 20:
+		log(text="smaller objects fall faster (not sure if that is good or not)", condition="passed")
+	else:
+		log(text="smaller objects fall faster (not sure if that is good or not)", condition="failed")
+
+	# |------------------------------------ Keep tests above here ------------------------------------------------|	
+	log(title="\n		Test finished")
+
+
+	objects = []
+	c.delete("all")
+
+	testResault["state"] = tk.DISABLED
+	jsonFile['frameRate'] = preTestSpeed
+	jsonFile['air_resistance'] = preTestFriction
+	stop = False
+
+
 
 while True:
 	render()
