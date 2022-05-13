@@ -103,19 +103,17 @@ def openGraph():
 
 	p1, = host.plot(energyGraphLine[0], energyGraphLine[1], 'r-', label="Sum Kenetic Energy")
 	p2, = par1.plot(ballsGraphLine[0], ballsGraphLine[1], 'g-', label="Number of balls")
-	p3, = par1.plot(velocity[0], velocity[1], 'o', label="Number of balls", color="grey", alpha=0.1, linewidth=1)
 
 	host.set_xlim(0, lifetime)
 	host.set_ylim(0, max(energyGraphLine[1])+(max(energyGraphLine[1])/10))
 	par1.set_ylim(0, max(ballsGraphLine[1])*2+(max(ballsGraphLine[1])/20))
-	par2.set_ylim(0, max(velocity[1]))
 
 	host.set_xlabel("Time")
 	host.set_ylabel("Sum Energy")
 	par1.set_ylabel("Number of balls")
-	par2.set_ylabel("Velocity")
 
-	lines = [p1, p2, p3]
+
+	lines = [p1, p2]
 	host.legend(lines, [l.get_label() for l in lines])
 
 	for ax in [par1, par2]:
@@ -127,16 +125,57 @@ def openGraph():
 
 	host.yaxis.label.set_color(p1.get_color())
 	par1.yaxis.label.set_color(p2.get_color())
-	par2.yaxis.label.set_color(p3.get_color())
 
 	par1.spines["right"].set_edgecolor(p2.get_color())
-	par2.spines["right"].set_edgecolor(p3.get_color())
 
 	host.tick_params(axis='y', colors=p1.get_color())
 	par1.tick_params(axis='y', colors=p2.get_color())
-	par2.tick_params(axis='y', colors=p3.get_color())
 
 	plt.show()
+
+def clear():
+    global objects
+    objects = []
+    c.delete("all")
+
+def openPresetWindow(options):
+	global jsonFile, objects # perset window
+	presetW= tk.Toplevel(window, bg="black")
+	presetW.title = "[15,0]"
+	presetW.geometry("300x500"+f"+{options.winfo_x()+325}+{options.winfo_y()}")
+	presetW.overrideredirect(True)
+
+	close_button = tk.Button(presetW, text="close", bg="white", fg="red", command=presetW.destroy)
+	close_button.pack(anchor=tk.NE, fill='none', padx=0, pady=0)
+	dragable = tk.Button(presetW, text="Presets", bg="white", fg="black", width=36)
+	dragable.place(x=0,y=0)
+
+
+
+	optionList = []
+	keys = list(jsonFile["scenes"].keys())
+
+
+
+	for i in range(len(keys)):
+		command = "clear()"
+		for j in range(len(jsonFile["scenes"][keys[i]])):
+			scene=jsonFile["scenes"][keys[i]][j]
+			scene=[str(x) for x in scene]
+			command += f"\nnewSphere({','.join(scene)})"+"#"*i
+		optionList.append(tk.Button(presetW, text=keys[i], bg="black", fg="white", command=lambda i=command: exec(i)))
+		print(command)
+		optionList[i].pack(anchor=tk.W, fill='none', padx=0, pady=0)
+
+
+
+	def drag(x,y):
+		offset=json.loads(presetW.title)
+		presetW.title=f"[{x+offset[0]},{y+offset[1]}]"
+		sync_windows()
+
+	dragable.bind("<Button1-Motion>", lambda event: drag(event.x,event.y))
+
 
 
 
@@ -166,7 +205,6 @@ def toolbarWindow():
 	levelName = tk.StringVar(options)
 	levelName.set("one") # default value
 	levelOptions = ",".join((jsonFile["scenes"]).keys())
-	print(levelOptions)
 	dropdown = tk.OptionMenu(options, levelName, *levelOptions)
 	dropdown.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 
@@ -264,7 +302,8 @@ def toolbarWindow():
 	vector_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
-
+	preset_button = tk.Button(options, text="Presets", bg="black", fg="white", command=lambda:openPresetWindow(options))
+	preset_button.pack(anchor=tk.NW, padx=10, pady=10)
 
 
 	lines_button = tk.Button(options, text="Graph", bg="black", fg="white", command=lambda:openGraph())
@@ -492,7 +531,6 @@ def render():
 				i += 4
 
 		for i in range(len(events)): # this way the events don't occur during the loop and mess with variables im useing
-			print(str(events[i]))
 			events[i]
 		events=[]
 
