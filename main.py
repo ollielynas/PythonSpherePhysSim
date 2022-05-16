@@ -2,7 +2,7 @@ import tkinter as tk
 import time
 import random
 import json
-from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil
+from math import acos, degrees, pi, sqrt, atan, asin, floor, log, ceil, sin
 import matplotlib.pyplot as plt
 
 
@@ -61,7 +61,7 @@ def newSphere(r, x, y, vx = 0, vy = 0):
 
 def dump():
 	with open('settings.json', 'w') as outfile:
-		json.dump(jsonFile, outfile, sort_keys=True, indent=4)
+		json.dump(jsonFile, outfile, indent=4)
 
 
 
@@ -69,7 +69,6 @@ def sync_windows():
 	for widget in window.winfo_children(): # Loop through each widget in main window
 		if '!toplevel' in str(widget):
 			offset=json.loads(widget.title)
-			print(widget.title)
 			x = window.winfo_x() + window.winfo_width() + offset[0]
 			y = window.winfo_y() + offset[1]
 			widget.geometry("+%d+%d" % (x,y))
@@ -154,16 +153,41 @@ def openPresetWindow(options):
 	keys = list(jsonFile["scenes"].keys())
 
 
+	particle_size = tk.StringVar()
+	particle_quantity = tk.StringVar()
+	particle_size.set(jsonFile["particle_size"])
+	particle_quantity.set(jsonFile["particle_quantity"])
+
+
+	def spawn_fluid():
+		try:
+			q = int(particle_quantity.get())
+			r = int(particle_size.get())
+			if q <= 0: return
+			if r <= 0: return
+		except ValueError:
+			return
+		for i in range(q):
+			newSphere(r, 300+random.randint(-10,10), 300+i)
+
 
 	for i in range(len(keys)):
 		command = "clear()"
+		if keys[i] == "particles":
+			tk.Button(presetW, text=keys[i], bg="black", fg="white", command=lambda i=command: spawn_fluid()).pack(anchor=tk.W, fill='none', padx=0, pady=[20,0])
+			tk.Label(presetW, text="particle size", bg="black", fg="white").pack(anchor=tk.W)
+			tk.Entry(presetW, textvariable=particle_size).pack(anchor=tk.W)
+			tk.Label(presetW, text="particle quantity", bg="black", fg="white").pack(anchor=tk.W)
+			tk.Entry(presetW, textvariable=particle_quantity).pack(anchor=tk.W)
+
+			break
 		for j in range(len(jsonFile["scenes"][keys[i]])):
 			scene=jsonFile["scenes"][keys[i]][j]
 			scene=[str(x) for x in scene]
 			command += f"\nnewSphere({','.join(scene)})"+"#"*i
+
 		optionList.append(tk.Button(presetW, text=keys[i], bg="black", fg="white", command=lambda i=command: exec(i)))
-		print(command)
-		optionList[i].pack(anchor=tk.W, fill='none', padx=0, pady=0)
+		optionList[i].pack(anchor=tk.W, fill='none', padx=3, pady=3)
 
 
 
@@ -175,14 +199,21 @@ def openPresetWindow(options):
 	dragable.bind("<Button1-Motion>", lambda event: drag(event.x,event.y))
 
 
+grav_sliderVar = tk.DoubleVar()
 
+
+def clearBalls():
+	global objects
+	objects=[]
+	c.delete("all")
 
 def toolbarWindow():
-	global jsonFile, energy_string_var
+	global jsonFile, energy_string_var, gav_sliderVar, events
 	options= tk.Toplevel(window, bg="black")
 	options.title = "[15,0]"
-	options.geometry("300x500"+f"+{window.winfo_x()+625}+{window.winfo_y()}")
-	options.overrideredirect(True)
+	options.geometry("300x800"+f"+{window.winfo_x()+625}+{window.winfo_y()}")
+	options.resizable(False, True)
+
 
 	close_button = tk.Button(options, text="close", bg="white", fg="red", command=options.destroy)
 	close_button.pack(anchor=tk.NE, fill='none', padx=0, pady=0)
@@ -251,8 +282,12 @@ def toolbarWindow():
 	framerate_input.pack(anchor=tk.NW, padx=10, pady=2)
 
 
-
-	
+	grav_slider =tk.Scale(options,
+                    from_=-1	, to=1, orient='horizontal', variable=grav_sliderVar,
+                    label="Gravity", resolution=0.01, bg="black", fg="white",
+					showvalue=0, length=200, width=20, troughcolor="black", highlightbackground="white", highlightcolor="white"
+					,activebackground="black", highlightthickness=0, borderwidth=1, relief=tk.FLAT)
+	grav_slider.pack(anchor=tk.NW, fill=tk.NONE, padx=10, pady=10)
 
 	def toggle_lines():
 		global jsonFile
@@ -287,6 +322,11 @@ def toolbarWindow():
 
 	test_button = tk.Button(options, text="test", bg="black", fg="white", command=lambda:test())
 	test_button.pack(anchor=tk.NW, padx=10, pady=10)
+
+
+	clear_button = tk.Button(options, text="clear", bg="black", fg="white", command=lambda:events.append(clearBalls()))
+	clear_button.pack(anchor=tk.NW, padx=10, pady=10)
+
 
 	# def toggle_vectors_graph():
 	# 	global jsonFile
@@ -366,7 +406,8 @@ run = True
 def detect_floor(obj):
 	if c.bbox(obj["o"])[3] >= 600:
 		c.move(obj["o"], 0, -c.bbox(obj["o"])[3] + 600)
-		return 0
+		if obj["vy"] > 0:
+			return 0
 	return obj["vy"]
 
 def detect_walls(obj):
@@ -397,6 +438,8 @@ def colisions(list, object):
 		except:
 			return list, object
 		bx = c.bbox(list[i]["o"])
+
+
 		if (list[i]["r"]+object["r"] >= sqrt((bx[2]-list[i]["r"] - (obx[2]-object["r"])) ** 2 + (bx[3]-list[i]["r"] - (obx[3]-object["r"])) ** 2)):
 			if [list[i],object] in colided or [object,list[i]] in colided:
 				break
@@ -445,12 +488,6 @@ def colisions(list, object):
 
 
 
-
-			if abs(abs(obj1.y) - abs(obj2.y)) > abs(abs(obj1.x) - abs(obj2.x)):
-				diff = abs(abs(obj1.x) - abs(obj2.x))/abs(abs(obj1.y) - abs(obj2.y))
-			else: 
-				diff = abs(abs(obj1.y) - abs(obj2.y))/abs(abs(obj1.x) - abs(obj2.x))
-
 			ratio = {
 				"x":abs(abs(obj1.x) - abs(obj2.x)),
 				"y":abs(abs(obj1.y) - abs(obj2.y))
@@ -462,8 +499,7 @@ def colisions(list, object):
 			ratio["x"] /= total
 			ratio["y"] /= total
 
-			totalvx = abs(obj1.vx)+abs(obj2.vx)
-			totalvy = abs(obj1.vy)+abs(obj2.vy)
+
 
 			totalE1 = (abs(obj1.vx)+abs(obj1.vy))*(obj1.m / obj2.m)
 			totalE2 =  (abs(obj2.vx)+abs(obj2.vy))*(obj2.m / obj1.m)
@@ -485,14 +521,6 @@ def colisions(list, object):
 
 
 
-			# object["vx"] = (obj2.vx*total)/ratio["x"] + (obj2.vy*total)/ratio["y"]
-
-			# object["vx"] = (obj1.m / obj2.m) * ((obj2.vx * (diff)) + (obj2.vy * (diff)))
-			# object["vy"] = (obj1.m / obj2.m) * ((obj2.vy * (diff)) + (obj2.vy *(diff)))
-			# list[i]["vx"] = (obj2.m / obj1.m) * ((obj1.vx * (diff)) + (obj1.vy * (diff)))
-			# list[i]["vy"] = (obj2.m / obj1.m) * ((obj1.vy * (1-diff)) + (obj1.vy *(1-diff)))
-
-
 
 
 
@@ -504,6 +532,8 @@ def colisions(list, object):
 	return (object, list)
 
 stop = False
+
+gravArrow = c.create_line(0, 0, 0, 0, fill="green", arrow=tk.LAST)
 
 def render():
 	global run, objects, colided, jsonFile, events, energy, lifetime, maxHeight, ballsGraphLine, obj_mem, stop
@@ -551,10 +581,13 @@ def render():
 			energy += abs(obj["vx"]*obj["m"]) + abs(obj["vy"]*obj["m"])
 
 
-			if str(type(objects[i])) != "<class 'dict'>":print(str(type(objects[i]))); break; 
-			obj["vy"] += 2
+			if str(type(objects[i])) != "<class 'dict'>":break; 
+			obj["vy"] += 2*	(((1 - (grav_sliderVar.get()**2))**0.5)-0.5)*2
+			obj["vx"] += 2* (((1 - (grav_sliderVar.get()**2))**0.5)-1)*2 if (grav_sliderVar.get() < 0)  else 2* (((1 - (grav_sliderVar.get()**2))**0.5)-1)*2 *-1
 
-			# Stokes’ Law: F=6πaηv. (air friction) to adapt this for one less dimention i square rooted raidus
+
+
+			# Stokes’ Law: F=6πaηv
 			obj["vy"] -= 2*((6*pi*obj["r"]*obj["vy"])/(6*pi*20*40))*jsonFile["air_resistance"]
 			obj["vx"] -= 2*((6*pi*obj["r"]*obj["vx"])/(6*pi*20*40))*jsonFile["air_resistance"]
 			obj["vx"] = floor(obj["vx"]*10000)/10000
@@ -605,6 +638,7 @@ def test():
 	global stop, objects
 	stop = True
 
+	grav_sliderVar.set(0)
 	testResault = tk.Toplevel(window)
 	testResault.title("test results")
 	testResault.minsize(500, 300)

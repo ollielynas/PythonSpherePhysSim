@@ -3,6 +3,8 @@
     "displayTotalEnergy": true,
     "frameRate": 1.0,
     "lines": false,
+    "particle_quantity": 50,
+    "particle_size": 10,
     "plot_velocity": true,
     "scenes": {
         "fall comparason": [
@@ -71,6 +73,20 @@
                 0
             ]
         ],
+        "bounce_on_falling_ball": [
+            [
+                60,
+                300,
+                300
+            ],
+            [
+                30,
+                220,
+                200,
+                0,
+                10
+            ]
+        ],
         "snowman": [
             [
                 35,
@@ -89,6 +105,18 @@
                 300,
                 500,
                 0
+            ]
+        ],
+        "particles": [
+            [
+                10,
+                300,
+                300
+            ],
+            [
+                10,
+                301,
+                400
             ]
         ]
     },
